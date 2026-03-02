@@ -11,6 +11,12 @@ From inside Claude Code, run:
 /plugin install ardent@ardent
 ```
 
+To update after changes:
+
+```
+/plugin marketplace update ardent
+```
+
 Or add to your project's `.claude/settings.json` for automatic setup:
 
 ```json
