@@ -4,9 +4,11 @@ Claude Code skills for the Ardent team.
 
 ## Install
 
-```bash
-claude /plugin marketplace add ardent-ai/ardent-claude-plugins
-claude /plugin install ardent@ardent
+From inside Claude Code, run:
+
+```
+/plugin marketplace add ardent-ai/ardent-claude-plugins
+/plugin install ardent@ardent
 ```
 
 Or add to your project's `.claude/settings.json` for automatic setup:
