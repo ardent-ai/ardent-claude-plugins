@@ -1,0 +1,13 @@
+{
+  "name": "ardent",
+  "owner": {
+    "name": "Ardent AI"
+  },
+  "plugins": [
+    {
+      "name": "ardent",
+      "source": "./plugins/ardent",
+      "description": "Ardent team skills — planning, review, git workflows, and more"
+    }
+  ]
+}
