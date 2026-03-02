@@ -6,7 +6,7 @@ argument-hint: "[path to plan file]"
 
 # Deepen Plan
 
-Takes an existing plan (from `/plan-custom`) and enhances each section with parallel research. Each major element gets a dedicated research agent to find best practices, performance considerations, edge cases, and real-world examples.
+Takes an existing plan (from `/plan-ardent`) and enhances each section with parallel research. Each major element gets a dedicated research agent to find best practices, performance considerations, edge cases, and real-world examples.
 
 ## Plan File
 

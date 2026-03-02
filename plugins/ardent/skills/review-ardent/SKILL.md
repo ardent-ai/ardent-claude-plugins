@@ -1,6 +1,6 @@
 ---
-name: review-custom
-description: Adaptive code review that scales from single-pass to full parallel swarm based on change size. One command for all review needs. Triggers on "review", "review my code", "check my changes". Use "/review-custom fix" to auto-fix findings.
+name: review-ardent
+description: Adaptive code review that scales from single-pass to full parallel swarm based on change size. One command for all review needs. Triggers on "review", "review my code", "check my changes". Use "/review-ardent fix" to auto-fix findings.
 ---
 
 # Review
@@ -20,9 +20,9 @@ Adaptive code review that automatically scales based on change size:
 
 ## Modes
 
-- **`/review-custom`** — Review only. Outputs the report.
-- **`/review-custom fix`** — Review + auto-fix. Fixes Detail findings and amends the appropriate commits.
-- **`/review-custom triage`** — Review, then present findings for interactive triage before fixing.
+- **`/review-ardent`** — Review only. Outputs the report.
+- **`/review-ardent fix`** — Review + auto-fix. Fixes Detail findings and amends the appropriate commits.
+- **`/review-ardent triage`** — Review, then present findings for interactive triage before fixing.
 
 **Argument parsing:** `$ARGUMENTS` is the full text after `/review`. Extract the mode keyword if one appears first:
 

@@ -45,7 +45,7 @@ Run each step in order. Each step is a slash command — invoke it via the Skill
 ### 1. Plan
 
 ```
-/plan-custom <feature_description>
+/plan-ardent <feature_description>
 ```
 
 Wait for the plan to be written. The plan includes a **Design Review** checkpoint (Phase 2) — let the user iterate on the high-level design there before detailing code changes. Don't rush past this phase.
@@ -68,7 +68,7 @@ The branch was already created in Setup. When `/work` asks about the branch, cho
 ### 3. Simplify
 
 ```
-/simplify
+/cleanup
 ```
 
 Clean up all changed files — dead code, nesting, trivial helpers, redundant logic. Re-run lint + typecheck after.
@@ -79,7 +79,7 @@ Clean up all changed files — dead code, nesting, trivial helpers, redundant lo
 
 **If `--swarm` mode:** Launch TWO agents in parallel (SINGLE message, both with `run_in_background: true`):
 
-- **Agent A — Review:** Task with `subagent_type: "general-purpose"`, `model: "sonnet"`: Run `/review-custom fix` — reviews the branch and auto-fixes Detail findings. Return the report and any Design findings.
+- **Agent A — Review:** Task with `subagent_type: "general-purpose"`, `model: "sonnet"`: Run `/review-ardent fix` — reviews the branch and auto-fixes Detail findings. Return the report and any Design findings.
 - **Agent B — Quality gates:** Task with `subagent_type: "general-purpose"`, `model: "haiku"`: Run `npm run typecheck && npm test -- --run`.
 
 Wait for both to complete. If review found Design findings or tests/typecheck failed, fix them sequentially, then re-run `npm run lint && npm run typecheck && npm test -- --run`.
@@ -91,7 +91,7 @@ Spawn a general-purpose agent:
 Agent tool:
   subagent_type: "general-purpose"
   model: "sonnet"
-  prompt: "Run `/review-custom fix` on the current branch. Reviews the branch and auto-fixes Detail findings by amending them into the correct commits. Design findings are reported but not auto-fixed. Return the review report and any Design findings that need judgment."
+  prompt: "Run `/review-ardent fix` on the current branch. Reviews the branch and auto-fixes Detail findings by amending them into the correct commits. Design findings are reported but not auto-fixed. Return the review report and any Design findings that need judgment."
 ```
 
 Wait for the agent to complete. If it reports Design findings, address them. Then re-run `npm run lint && npm run typecheck`.

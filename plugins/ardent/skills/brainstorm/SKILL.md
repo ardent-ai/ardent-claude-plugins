@@ -6,7 +6,7 @@ argument-hint: "[feature idea or problem to explore]"
 
 # Brainstorm
 
-Brainstorming answers **WHAT** to build through collaborative dialogue. It precedes `/plan-custom`, which answers **HOW** to build it.
+Brainstorming answers **WHAT** to build through collaborative dialogue. It precedes `/plan-ardent`, which answers **HOW** to build it.
 
 ## Feature Description
 
@@ -19,7 +19,7 @@ Do not proceed until you have a feature description.
 ### Phase 0: Assess Requirements Clarity
 
 **If requirements are already detailed** (specific acceptance criteria, exact expected behavior, constrained scope):
-Use **AskUserQuestion tool**: "Your requirements seem detailed enough to proceed directly to `/plan-custom`. Should I plan instead, or explore the idea further?"
+Use **AskUserQuestion tool**: "Your requirements seem detailed enough to proceed directly to `/plan-ardent`. Should I plan instead, or explore the idea further?"
 
 ### Phase 1: Understand the Idea
 
@@ -99,7 +99,7 @@ Use **AskUserQuestion tool**:
 **Question:** "Brainstorm captured. What next?"
 
 **Options:**
-1. **Proceed to /plan-custom** — will auto-detect this brainstorm
+1. **Proceed to /plan-ardent** — will auto-detect this brainstorm
 2. **Run document review** — structured quality check before proceeding
 3. **Refine further** — continue exploring
 4. **Done for now** — return later

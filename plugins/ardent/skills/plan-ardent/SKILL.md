@@ -1,5 +1,5 @@
 ---
-name: plan
+name: plan-ardent
 description: Transform feature descriptions into well-structured plans
 argument-hint: "[feature description or problem]"
 ---

@@ -125,7 +125,7 @@ Ask the user which plan to execute.
 
 3. **Simplify**
 
-   Run `/simplify` on all changed files. This cleans up dead code, flattens nesting, inlines trivial helpers, and collapses redundant logic — without changing behavior. (`/simplify` uses `context: fork` so it runs in a fresh context.)
+   Run `/cleanup` on all changed files. This cleans up dead code, flattens nesting, inlines trivial helpers, and collapses redundant logic — without changing behavior. (`/cleanup` uses `context: fork` so it runs in a fresh context.)
 
    After simplify, re-run lint + typecheck to confirm nothing broke.
 
@@ -139,7 +139,7 @@ Ask the user which plan to execute.
    Agent tool:
      subagent_type: "general-purpose"
      model: "sonnet"
-     prompt: "Run `/review-custom fix` on the current branch. This reviews the branch and auto-fixes Detail findings by amending them into the correct commits. Design findings are reported but not auto-fixed. Return the review report and list of any Design findings that need human judgment."
+     prompt: "Run `/review-ardent fix` on the current branch. This reviews the branch and auto-fixes Detail findings by amending them into the correct commits. Design findings are reported but not auto-fixed. Return the review report and list of any Design findings that need human judgment."
    ```
 
    Wait for the agent to complete. If it reports Design findings or unresolved issues, address them before moving on.

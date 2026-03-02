@@ -6,7 +6,7 @@ argument-hint: "[plan file path, topic, or feature description]"
 
 # Design Review
 
-Explore multiple structurally different approaches for a feature, synthesize the best design, and present a clear recommendation. Use standalone on existing plans or as the design phase during `/plan-custom`.
+Explore multiple structurally different approaches for a feature, synthesize the best design, and present a clear recommendation. Use standalone on existing plans or as the design phase during `/plan-ardent`.
 
 ## Input
 
@@ -16,7 +16,7 @@ Explore multiple structurally different approaches for a feature, synthesize the
 
 - **If a file path** — read the plan directly
 - **If a topic/keyword** — search `.untracked/` for matching plan files, pick the best match and confirm with the user
-- **If a feature description** (called from `/plan-custom`) — use the feature description and research context already gathered
+- **If a feature description** (called from `/plan-ardent`) — use the feature description and research context already gathered
 - **If empty** — list plans from the agent workspace and ask the user to pick one
 
 ## Step 1: Gather Context
@@ -29,7 +29,7 @@ Launch in parallel (SINGLE message, both with `run_in_background: true`):
 
 Consolidate: relevant file paths, existing abstractions, current data flow, institutional learnings.
 
-**If called from `/plan-custom`** — use the research context already gathered in Phase 1. Don't re-run research.
+**If called from `/plan-ardent`** — use the research context already gathered in Phase 1. Don't re-run research.
 
 ## Step 2: Understand Current State
 
@@ -41,7 +41,7 @@ Consolidate: relevant file paths, existing abstractions, current data flow, inst
 4. **Layer Responsibilities** — Which package owns what concern? Right layer?
 5. **What Gets Simpler** — What existing code becomes unnecessary? If nothing, flag it.
 
-**If called from `/plan-custom`** — there's no plan yet. Use the feature description and codebase context to understand the problem space. The first approach you generate in Step 3 can be the "obvious" solution.
+**If called from `/plan-ardent`** — there's no plan yet. Use the feature description and codebase context to understand the problem space. The first approach you generate in Step 3 can be the "obvious" solution.
 
 ## Step 3: Explore Approaches
 

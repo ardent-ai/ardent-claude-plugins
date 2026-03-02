@@ -157,7 +157,7 @@ Use **AskUserQuestion tool**:
 **Question:** "Shaping captured. What next?"
 
 **Options:**
-1. **Proceed to /plan-custom** — will auto-detect this shaping doc
+1. **Proceed to /plan-ardent** — will auto-detect this shaping doc
 2. **Run /breadboarding** — map the chosen shape into affordances and wiring
 3. **Run document review** — structured quality check
 4. **Refine further** — continue shaping

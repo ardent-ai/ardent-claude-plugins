@@ -36,7 +36,7 @@ Skills show up as `/<skill-name>` with `(ardent)` label in the autocomplete.
 |---|---|---|
 | brainstorm | `/brainstorm` | Explore requirements and approaches through collaborative dialogue |
 | shaping | `/shaping` | Shape Up methodology for ambiguous features |
-| plan | `/plan` | Transform feature descriptions into structured plans |
+| plan-ardent | `/plan-ardent` | Transform feature descriptions into structured plans |
 | deepen-plan | `/deepen-plan` | Enhance plans with parallel research agents |
 | design-review | `/design-review` | Validate high-level design before building |
 | document-review | `/document-review` | Structured review rubric for plans and docs |
@@ -54,9 +54,9 @@ Skills show up as `/<skill-name>` with `(ardent)` label in the autocomplete.
 
 | Skill | Command | Description |
 |---|---|---|
-| review | `/review` | Adaptive code review, scales from single-pass to 9-agent swarm |
+| review-ardent | `/review-ardent` | Adaptive code review, scales from single-pass to 9-agent swarm |
 | security-scan | `/security-scan` | STRIDE-based security analysis |
-| simplify | `/simplify` | Simplify code for clarity and maintainability |
+| cleanup | `/cleanup` | Simplify code for clarity and maintainability |
 | address_pr_feedback | `/address_pr_feedback` | Analyze and implement PR review feedback |
 
 ### Git

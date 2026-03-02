@@ -1,5 +1,5 @@
 ---
-name: simplify
+name: cleanup
 description: Simplify and refine recently modified code for clarity and maintainability while preserving behavior. Use for requests like "simplify this", "clean this up", "reduce complexity", or readability-focused refactors.
 context: fork
 ---
