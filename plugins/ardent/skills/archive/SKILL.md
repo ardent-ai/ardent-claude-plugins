@@ -42,13 +42,13 @@ Keep this lightweight — one question with sensible defaults, not a form interr
 
 ### 3. Sync local checkout
 
-The archive repo lives at `~/.claude/docs-archive/`. Sync it:
+The archive repo lives at `~/ardent/docs-archive/`. Sync it:
 
 ```bash
-if [ -d ~/.claude/docs-archive/.git ]; then
-  cd ~/.claude/docs-archive && git pull --ff-only
+if [ -d ~/ardent/docs-archive/.git ]; then
+  cd ~/ardent/docs-archive && git pull --ff-only
 else
-  gh repo clone ardent-ai/docs-archive ~/.claude/docs-archive
+  git clone git@github.com:ardent-ai/docs-archive.git ~/ardent/docs-archive
 fi
 ```
 
@@ -62,7 +62,7 @@ Derive the filename:
 Copy the HTML file:
 
 ```bash
-cp /path/to/source.html ~/.claude/docs-archive/docs/{date}-{slug}.html
+cp /path/to/source.html ~/ardent/docs-archive/docs/{date}-{slug}.html
 ```
 
 Read `manifest.json`, append the new entry, write it back. The entry shape:
@@ -87,7 +87,7 @@ Omit `links` (or individual keys within it) if no URLs were provided. Omit `desc
 ### 5. Commit and push
 
 ```bash
-cd ~/.claude/docs-archive
+cd ~/ardent/docs-archive
 git add docs/{date}-{slug}.html manifest.json
 git commit -m "archive: {title}"
 git push
