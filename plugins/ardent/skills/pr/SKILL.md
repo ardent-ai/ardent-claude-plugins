@@ -1,14 +1,15 @@
 ---
 name: pr
-version: 1.0.0
+version: 1.1.0
 description: |
   Create a pull request end-to-end: generate description, humanize the copy,
-  find and link related Linear issues, and open the PR via gh CLI.
+  find and link related Linear issues, optionally generate a visual reviewer guide,
+  and open the PR via gh CLI.
 ---
 
 # PR — Create Pull Request
 
-End-to-end PR creation pipeline. Analyzes the branch, generates a description, humanizes the copy, links Linear issues, and creates the PR.
+End-to-end PR creation pipeline. Analyzes the branch, generates a description, humanizes the copy, links Linear issues, optionally produces a visual reviewer guide, and creates the PR.
 
 ## Pipeline
 
@@ -151,7 +152,26 @@ Append any linked issues at the bottom of the body, each on its own line:
 Closes ENG-123
 ```
 
-### 5. Create the PR
+### 5. Reviewer guide (conditional)
+
+Assess whether the PR warrants a visual reviewer guide. The decision:
+
+- **`big-feature`** → always generate one
+- **`feature`** → generate when the diff touches 4+ files across 2+ packages/directories, introduces new data flows, or adds a new system/module that a reviewer would need context to understand
+- **`issue`** → skip
+
+If the PR doesn't qualify, move to step 6.
+
+**If generating:**
+
+1. Invoke `/visual-explainer` via the Skill tool. Frame the prompt around what a reviewer needs to understand — the before/after, the data flow, the architecture change, or the new UX flow. Use the branch diff and PR description as source material.
+2. Invoke `/archive` via the Skill tool to publish the HTML to the docs archive. Use the PR title as the archive title.
+3. Add the archive URL to the PR body. Insert it right after the opening paragraph or Key Changes section, as a standalone line:
+   ```md
+   [Reviewer guide](https://ardent-ai.github.io/docs-archive/docs/{date}-{slug}.html)
+   ```
+
+### 6. Create the PR
 
 Present the final title and body to the user for review before creating. Then:
 
