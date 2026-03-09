@@ -10,7 +10,7 @@ Adaptive code review that automatically scales based on change size:
 | Change Size | Strategy |
 |-------------|----------|
 | **Small** (1-3 files, <150 lines) | Single focused pass — no subagents |
-| **Medium** (4-10 files, 150-500 lines) | 2-3 targeted agents based on what changed |
+| **Medium** (4-10 files, 150-500 lines) | 3-5 targeted agents based on what changed |
 | **Large** (10+ files or 500+ lines) | Full 9-agent parallel swarm |
 
 ## Context
@@ -44,15 +44,17 @@ Glob("**/CLAUDE.md") in the repo root
 Read("~/.claude/CLAUDE.md") for global user instructions
 ```
 
-Read every CLAUDE.md file completely. Store the **full contents** as `CLAUDE_MD_CONTENT` — you will inline relevant sections into agent prompts so agents don't waste turns reading them.
+Store the **file paths** as `CLAUDE_MD_PATHS` — agents will read these files themselves (do NOT paste CLAUDE.md contents into agent prompts).
+
+- **Small strategy**: Read every CLAUDE.md file for your own understanding — you'll need them for single-pass review.
+- **Medium/Large strategy**: Do NOT read CLAUDE.md files yourself — only collect the paths. Agents will read them. Keep your context lightweight for synthesis.
 
 #### 1b. Check Past Solutions
 
 Scan for learnings from previous reviews and debugging sessions that may be relevant to this change:
 
 ```bash
-ls .untracked/solutions/ 2>/dev/null
-ls .untracked/.shared/*/ 2>/dev/null
+ls .untracked/solutions/ .untracked/.shared/ 2>/dev/null || true
 ```
 
 Skim the filenames. If any look relevant to the changed files/domains (based on the branch name or what you already know about the change), read those solution files. Store relevant excerpts as `PAST_SOLUTIONS` — a few bullet points summarizing patterns to watch for.
@@ -78,11 +80,11 @@ Parse the arguments to determine the review target, then run ONLY the matching d
 
 If the arguments mention specific files, add `-- {files}` to scope the diff. Combine with the target type (e.g., "unstaged changes in foo.ts" → `git diff -- foo.ts`).
 
-Store the **diff command** as `DIFF_COMMAND`.
+Store the **base diff command** as `DIFF_COMMAND` (e.g., `git diff main...HEAD`). Agents will use this with per-file scoping — NOT read a monolithic diff.
 
 **Context management for the orchestrator:**
 - **Small strategy**: Run the full diff yourself — you'll need it for single-pass review.
-- **Medium/Large strategy**: Run `{DIFF_COMMAND} --stat` and `git log --oneline main..HEAD` for scope measurement and the change summary. Then prepare per-agent scoped diffs (see Phase 2) — you will inline diff content directly into agent prompts so they don't waste turns on discovery.
+- **Medium/Large strategy**: Only run `{DIFF_COMMAND} --stat` and `git log --oneline main..HEAD` for scope measurement and the change summary. Do NOT read the full diff — agents will get per-file diffs themselves. Keep the orchestrator context lightweight so it can hold all 9 agent outputs during synthesis.
 
 #### 1d. Measure Scope and Choose Strategy
 
@@ -97,7 +99,7 @@ Use the **larger** category if metrics disagree (e.g., 2 files but 300 lines = M
 
 **The strategy is binding.** Once you measure and announce a strategy, you MUST follow it:
 - **Small** → single pass, no agents
-- **Medium** → spawn 2-3 targeted agents (never single pass)
+- **Medium** → spawn 3-5 targeted agents (never single pass)
 - **Large** → spawn all 9 agents (never single pass)
 
 Do NOT downgrade a medium/large review to single pass. The whole point of agents is parallel, specialized analysis. A single pass cannot replicate 9 focused perspectives.
@@ -133,7 +135,7 @@ Do NOT read the Small strategy section if you announced medium or large. Skip di
 
 **ONLY use this if you announced "small" in Phase 1d.** If you announced medium or large, skip to the matching section.
 
-Review all changes yourself in one pass. Start by understanding the goal (Phase 1.5), then cover all perspectives. Apply the verification rules and hard exclusions from the agent template below, and use the scan patterns (type quality, AI debt, silent failure) listed in the agent-specific context table:
+Review all changes yourself in one pass. Read `~/.claude/skills/review/verification-rules.md` and `~/.claude/skills/review/scan-patterns.md` for the rules and patterns. Start by understanding the goal (Phase 1.5), then cover all perspectives:
 
 - **Design**: Right approach? Clean data flow? Proper separation of concerns? Could the high-level approach be simpler?
 - **Gaps**: Anything obviously missing — unhandled cases, absent related changes, untested paths?
@@ -156,11 +158,11 @@ After completing the single pass, skip directly to **Phase 3: Synthesize and Val
 
 **ONLY use this if you announced "medium" in Phase 1d.** You MUST spawn agents — do NOT do a single pass.
 
-Select 2-3 agents based on what changed. Pick the 2-3 most relevant perspectives — fewer focused agents with full context outperform many starved ones.
+Select 3-4 agents based on what changed. Always include `Convention Reviewer` + one domain expert.
 
-**Selection logic** (pick 2-3, not all):
+**Selection logic:**
 
-- If conventions/naming/patterns matter: **Convention Reviewer**
+- Always: **Convention Reviewer**
 - If new types/interfaces: **TypeScript Reviewer**
 - If security-adjacent (auth, IPC, network, permissions): **Security Reviewer**
 - If architectural changes (new packages, cross-package imports, new services): **Architecture Reviewer**
@@ -176,28 +178,52 @@ Then proceed to **Spawning Agents** below.
 
 #### Strategy: Large (Full Swarm)
 
-**ONLY use this if you announced "large" in Phase 1d.** You MUST spawn ALL 9 agents — do NOT do a single pass.
+**ONLY use this if you announced "large" in Phase 1d.** You MUST spawn agents for all 9 agent types — do NOT do a single pass.
 
-Use ALL 9 agents:
+The 9 agent types: Convention, Design, Simplicity, TypeScript, Security, Architecture, Test, Performance, Frontend.
 
-1. Design Reviewer
-2. Convention Reviewer
-3. TypeScript Reviewer
-4. Simplicity Reviewer
-5. Security Reviewer
-6. Architecture Reviewer
-7. Test Reviewer
-8. Performance Reviewer
-9. Frontend Reviewer
+**After building the coverage matrix**, skip agent types with 0 files and split any type exceeding 20 files into multiple instances (see coverage matrix step 3). The total agent count is dynamic — it scales with the size of the change.
 
 Then proceed to **Spawning Agents** below.
+
+---
+
+#### Building the File Coverage Matrix
+
+<critical>
+Do NOT manually compute chunk assignments, domain filtering, or agent counts in your thinking. Run the script below — it handles classification, bin-packing, domain filtering, merge of tiny trailing chunks, and threshold checks in milliseconds. Parse the output mechanically and spawn agents from it.
+</critical>
+
+**Run the coverage script** (replace `{DIFF_COMMAND}` with the actual diff command):
+
+```bash
+bash ~/.claude/skills/review-ardent/chunk-files.sh '{DIFF_COMMAND}'
+```
+
+The output contains pre-chunked file lists organized by agent category:
+
+| Output section | Agent types to spawn | How many instances |
+|---|---|---|
+| `=== CROSS ===` | Convention, Design, Simplicity | One instance of **each** type per `CHUNK` |
+| `=== TEST ===` | Test | One instance per `CHUNK` |
+| `=== ARCHITECTURE ===` | Architecture | One instance per `CHUNK` |
+| `=== FRONTEND ===` | Frontend | One instance per `CHUNK` |
+| `=== SECURITY ===` | Security | One instance per `CHUNK` |
+| `=== TYPESCRIPT ===` | TypeScript | One instance per `CHUNK` |
+| `=== PERFORMANCE ===` | Performance | One instance per `CHUNK` |
+
+- Sections marked `(skip)` or `(N lines, skip)` — skip that agent type entirely.
+- Each `CHUNK N/M` header shows its pre-saved diff file path in brackets: `[/tmp/review-cross-1.diff]`. Pass this path as `{DIFF_FILE}` in the agent prompt.
+- The file list under each chunk shows files with line counts — copy directly into the agent's file manifest.
+- For cross-cutting agents (Convention, Design, Simplicity) sharing the same CROSS chunk, all three agents use the **same** diff file.
+- Name instances: `Convention 1/6`, `Convention 2/6`, etc. Report skipped types as "No files in scope" in Coverage.
 
 ---
 
 #### Spawning Agents
 
 <critical>
-CRITICAL: You MUST use the **Agent** tool (also known as "Task" tool) to spawn subagent processes. This is the tool with parameters `prompt`, `description`, `subagent_type`, and `run_in_background`.
+CRITICAL: You MUST use the **Agent** tool (also known as "Task" tool) to spawn subagent processes. This is the tool with parameters `prompt`, `description`, `subagent_type`, `run_in_background`, and `model`.
 
 Do NOT use any of these alternatives:
 - TaskCreate, TaskUpdate, or TaskList — those are task-tracking tools that create checklist items, NOT agents
@@ -206,137 +232,39 @@ Do NOT use any of these alternatives:
 Do NOT skip agent spawning and do a single-pass review yourself. The whole point of medium/large strategy is parallel agents.
 </critical>
 
-#### Preparing Agent Context (Orchestrator Does This BEFORE Spawning)
+**Spawn ALL selected agents in a SINGLE assistant message.** This is how you achieve parallelism — multiple Task tool calls in one response run concurrently.
 
-Agents have limited turns. Every turn an agent spends on discovery (reading diffs, reading CLAUDE.md) is a turn it can't spend on analysis. The orchestrator must front-load all context.
-
-**Step 1: Prepare per-agent diffs.** Use the `--stat` output to identify which files are relevant to each agent, then generate targeted diffs:
-
-```bash
-# Build per-agent diffs using file paths from --stat.
-# Only include files relevant to each agent's specialty.
-# Example patterns (adapt to what actually changed):
-
-# Security: auth, IPC, permissions, MCP files
-git diff main...HEAD -- '**/oauth/**' '**/auth/**' '**/mcp/**' '**/ipc/**' '**/permission*' > /tmp/review-security.diff
-
-# Frontend: .tsx, hooks, effects, CSS
-git diff main...HEAD -- '*.tsx' '*.css' '**/frontend/**' '**/renderer/**' > /tmp/review-frontend.diff
-
-# Tests: test files only
-git diff main...HEAD -- '**/*.test.ts' '**/*.test.tsx' '**/__tests__/**' > /tmp/review-tests.diff
-
-# Backend: everything else (services, models, stores)
-git diff main...HEAD -- '*.ts' ':!*.test.ts' ':!*.test.tsx' ':!*.tsx' ':!*.css' > /tmp/review-backend.diff
-```
-
-Adapt patterns to what actually changed. If an agent's scoped diff is empty (0 lines), **do not spawn that agent** — skip it entirely.
-
-**Step 2: Read the scoped diff files** into memory. You will paste the relevant diff content directly into each agent's prompt.
-
-**Step 3: Extract relevant CLAUDE.md rules.** From `CLAUDE_MD_CONTENT`, extract the sections relevant to each agent type (e.g., Convention Reviewer needs the Code Style, TypeScript Patterns, and UI Components sections; Security Reviewer needs the architecture overview). Prepare a condensed excerpt for each.
-
-**Agent-to-diff mapping:**
-
-| Agent | Diff source | CLAUDE.md sections to inline |
-|-------|-------------|------------------------------|
-| Convention Reviewer | backend + frontend | Code Style, TypeScript Patterns, UI Components, File Naming |
-| TypeScript Reviewer | backend + infra | TypeScript Patterns |
-| Design Reviewer | backend | Architecture overview |
-| Simplicity Reviewer | backend | (minimal — architecture overview) |
-| Security Reviewer | security diff (skip if empty) | Architecture overview |
-| Architecture Reviewer | backend + infra | Architecture, package structure |
-| Test Reviewer | tests diff (skip if empty) | Testing section |
-| Performance Reviewer | backend + frontend | Architecture overview |
-| Frontend Reviewer | frontend diff (skip if empty) | UI Components, Code Style |
-
-#### Spawning
-
-**Spawn ALL selected agents in a SINGLE assistant message.** This is how you achieve parallelism — multiple Agent tool calls in one response run concurrently.
-
-Each agent MUST:
-- **Receive its scoped diff content inline in the prompt** — agents should NOT need to read files or run git commands to get the diff
-- **Receive relevant CLAUDE.md rules inline** — agents should NOT need to read CLAUDE.md themselves
-- Receive the change summary and past solutions
-- Be told to **return text findings only — do NOT use Write, Edit, or modify any files**
-- Receive the output format and hard exclusions inline
-- Use `run_in_background: true` so they execute in parallel
+Each agent receives: its **diff file path** (from coverage matrix `[...]` brackets), the **change summary**, and **focus instructions** (from table below). Convention agents also get **CLAUDE.md paths**. All agents read `verification-rules.md` themselves (it has the output format, verification rules, and hard exclusions). Use `run_in_background: true`.
 
 <parallel_tasks>
-Here is the exact pattern — spawn all agents in ONE message using multiple Agent tool calls:
-
-For each selected agent, make an Agent tool call with these parameters:
-- `description`: "{agent-name} review of {branch}"
-- `subagent_type`: Use the exact agent type name (e.g., "Convention Reviewer", "TypeScript Reviewer", "Design Reviewer", "Security Reviewer", "Architecture Reviewer", "Simplicity Reviewer", "Test Reviewer", "Performance Reviewer", "Frontend Reviewer")
+Spawn all agents in ONE message. For each agent:
+- `description`: "Review: {agent-name}"
+- `subagent_type`: The exact type (e.g., "Convention Reviewer", "Design Reviewer")
 - `run_in_background`: true
-- `prompt`: Use this template, filling in the agent-specific sections:
-
-**IMPORTANT:** Replace `{AGENT_NAME}` below with the actual agent type (e.g., "Design Reviewer", "Security Reviewer") before sending.
+- `prompt`: Use this template — replace `{PLACEHOLDERS}`. Keep it SHORT — do not add text beyond what's here:
 
 ```
-You are the {AGENT_NAME}.
-
-## Output format (MANDATORY)
-
-AGENT: {AGENT_NAME}
-FINDINGS_COUNT: {number, or 0 if none}
-
-FINDING: 1
-SEVERITY: design | detail
-CONFIDENCE: {0-100}
-FILE: {path} LINE: {number}
-TITLE: {brief title}
-ISSUE: {what's wrong}
-SUGGESTION: {fix}
----
-
-Zero findings: AGENT: {AGENT_NAME} / FINDINGS_COUNT: 0
-
-## Context
-
-**Change summary:** {CHANGE_SUMMARY}
-{If PAST_SOLUTIONS is non-empty: **Past learnings:** {PAST_SOLUTIONS}}
-
-### Project rules (from CLAUDE.md)
-
-{Relevant CLAUDE.md excerpts for this agent — already extracted by orchestrator}
-
-### Diff to review
-
-{Paste the scoped diff content inline here}
-
-## Focus
-
-{Agent-specific focus — see agent-specific context table below}
-
-## Rules
-
-- Verify findings with concrete evidence. If you can't prove it's wrong, drop it. No hypotheticals.
-- You may read source files to verify findings — use targeted line ranges, not whole files.
-- Text output only — do NOT use Write/Edit.
-- Quality over quantity — a few verified findings beat many speculative ones.
-
-## Hard exclusions — drop these
-
-Security in test files only, DoS without business impact, rate limiting, missing validation without downstream impact, theoretical races, log injection, env vars as untrusted, React/Radix XSS (auto-escaped), client-side auth, "could diverge" across boundaries, missing error handling with upstream boundaries, abstractions for <4 occurrences, tests for type-guaranteed behavior, import order (Biome handles it).
+{AGENT_NAME}. Read ~/.claude/skills/review-ardent/verification-rules.md then {DIFF_FILE}.
+{If Convention: Also read CLAUDE.md: {CLAUDE_MD_PATHS}}
+Change: {CHANGE_SUMMARY}
+Focus: {FOCUS_INSTRUCTIONS}
+Max 3 findings, max 3 verification reads. No Write/Edit.
 ```
 </parallel_tasks>
 
-**Agent-specific focus to include in prompts:**
+**Agent-specific focus instructions to include in prompts:**
 
-| Agent | Focus to inline |
-|-------|----------------|
-| Convention Reviewer | **AI Debt Scan**: flag restating comments, docstring bloat, generic naming, boilerplate error handling, nosy debug logging, bare TODOs without issue reference. **Type Quality Scan**: flag indexed access types, utility-type extraction (`ReturnType<typeof fn>`), `typeof` in type positions, `unknown` + cast, inline anonymous object types in signatures/generic args, weakened discriminated unions. |
-| TypeScript Reviewer | **Type Quality Scan**: flag indexed access types (`SomeType['prop']`), utility-type extraction (`ReturnType<typeof fn>`, `Parameters<typeof fn>[0]`, `Awaited<ReturnType<...>>`), `typeof` in type positions, `unknown` + cast, inline anonymous object types in signatures/generic args, weakened discriminated unions. |
-| Design Reviewer | **Silent Failure Scan**: flag empty catch blocks, swallowed errors (log but continue when caller needs to know), broad exception catching, silent fallbacks (return default/null without logging), missing error context, fire-and-forget `.catch(() => {})` on operations whose failure should be visible. |
-| Security Reviewer | **Silent Failure Scan** (same as Design). Project threat model if non-default. |
-| Architecture Reviewer | Focus on package boundary violations and cross-package coupling. |
-| Test Reviewer | Note which files are test files vs code they test. |
-| Performance Reviewer | Focus on DB queries, IPC calls, N+1 patterns, unnecessary re-renders. |
-| Frontend Reviewer | Focus on stale closures, race conditions, missing cleanup, incorrect effect deps. |
-| Simplicity Reviewer | Focus on YAGNI violations, unnecessary abstractions, over-engineering. |
-
-**Clean up temp files after all agents complete**: `rm -f /tmp/review-*.diff`
+| Agent | Focus instructions |
+|-------|---|
+| Convention Reviewer | Check CLAUDE.md compliance: naming, patterns, imports, component usage. Run the **Type Quality Scan**: look for indexed access types (`SomeType['prop']`), utility-type extraction (`ReturnType<typeof fn>`), `typeof` in type positions, `unknown` + cast, inline anonymous types in signatures, weakened discriminated unions. Also run **AI Debt Scan**: restating comments, docstring bloat, generic naming, boilerplate error handling, nosy debug logging, bare TODOs. |
+| TypeScript Reviewer | Type safety, modern patterns, naming quality. Run the **Type Quality Scan** (same patterns as Convention). |
+| Design Reviewer | Right approach? Clean data flow? Proper separation of concerns? Run the **Silent Failure Scan**: empty catch blocks, swallowed errors, broad exception catching, silent fallbacks, missing error context, fire-and-forget without catch. |
+| Security Reviewer | Actual vulnerabilities given the threat model. Run the **Silent Failure Scan**. {Include project threat model if non-default.} |
+| Architecture Reviewer | Package boundary violations, cross-package coupling, proper separation of concerns. {Include package structure description.} |
+| Test Reviewer | Are the right things tested? Testing philosophy compliance? {Note which files are test files vs the code they test.} |
+| Performance Reviewer | N+1 queries, memory leaks, IPC overhead, unnecessary re-renders. {Note which files have DB queries, IPC calls, React components.} |
+| Frontend Reviewer | Stale closures, race conditions, missing cleanup, incorrect deps, event listener leaks. {Note which files are .tsx, hooks, effects.} |
+| Simplicity Reviewer | Over-engineering? YAGNI violations? Unnecessary complexity? |
 
 **WAIT** for all background agents to complete before proceeding to Phase 3.
 
@@ -351,16 +279,19 @@ After all agents report:
 2. **Merge** into a single list
 3. **Deduplicate** — same issue from multiple agents = report once with higher confidence
 4. **Cross-validate** — issues flagged by 2+ agents are especially credible
-5. **Challenge findings using your existing context** (diff stats, change summary, what you already know). Only read a source file if you genuinely can't determine whether a finding is valid without it. Ask:
-   - "Is this actually wrong, or intentional?"
-   - For "duplication": at different boundaries? Drop it
-   - For "could diverge/break": concrete triggering input? If no, drop it
-   - For security: realistic attacker and vector? If no, drop it
-   - For "missing X": does code actually need X, or is this over-engineering?
+5. **Challenge findings efficiently** — do NOT read code for every finding:
+   - **Confidence >= 93 with clear VERIFIED evidence**: Accept without re-reading code. The agent already verified.
+   - **Confidence 85-92 or weak/missing verification**: Read the actual code to verify. Max 5 verification reads total — prioritize the most uncertain findings.
+   - For all findings, apply these mental checks (no file read needed):
+     - "Is this actually wrong, or intentional?"
+     - For "duplication": at different boundaries? Drop it
+     - For "could diverge/break": concrete triggering input? If no, drop it
+     - For security: realistic attacker and vector? If no, drop it
+     - For "missing X": does code actually need X, or is this over-engineering?
 6. **Surface gaps** — using the Phase 1.5 analysis, identify anything obviously missing (unhandled cases, absent related changes, untested paths). Add these as Missing findings.
 7. **Organize** into Design, Missing, and Details sections
 8. **Number findings** sequentially starting at #1 across all sections (e.g., Design #1-#3, Missing #4, Details #5+)
-9. **Clean up temp files**: `rm -f /tmp/review-*.diff`
+9. **Clean up diff files**: `rm -f /tmp/review-*.diff`
 
 ### Phase 4: Report
 
@@ -418,9 +349,13 @@ Findings reviewed and intentionally not fixed — acknowledged debt, not resolve
 ---
 
 ### Coverage
-| Agent | Status | Findings |
-|-------|--------|----------|
-| ... | Done | {count} |
+| Agent | Files Assigned | Status | Findings |
+|-------|---------------|--------|----------|
+| Convention 1/N | {count} | Done | {count} |
+| Convention 2/N | {count} | Done | {count} |
+| Design 1/N | {count} | Done | {count} |
+| ... | ... | ... | ... |
+| {domain agent} | {count} | Done / No files in scope | {count} |
 ```
 
 Quality over quantity. A review with 3 verified findings beats one with 25 unverified ones.
@@ -515,7 +450,7 @@ Output a fix summary with findings fixed, commits amended, and verification stat
 
 ## Guidelines
 
-- Read CLAUDE.md files fresh every time — then inline relevant sections into agent prompts so agents don't waste turns on discovery.
+- NEVER hardcode CLAUDE.md rules in prompts. Read files fresh every time.
 - Every convention finding must cite a specific CLAUDE.md rule.
 - Skip anything caught by automated tools.
 - Focus on the diff. Don't review unchanged code unless the diff breaks patterns.
