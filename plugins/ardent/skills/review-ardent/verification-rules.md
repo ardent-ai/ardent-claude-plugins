@@ -52,10 +52,11 @@ Phase 3 — OUTPUT: Format and return findings. This is mandatory — you must a
 
 1. Read the actual file for context around the flagged line — not the entire file.
 2. Verify with a concrete example. If you can't prove it's wrong, drop it.
-3. Write a brief counterargument. If the counterargument is stronger, drop it.
+3. Write a brief counterargument. If the counterargument is stronger, drop it. BUT: "it's minor", "it's only N lines", or "it's small" are NOT valid counterarguments — they address severity, not correctness. A valid counterargument explains why the code is *actually right* (e.g., "the alias exists because consumers shouldn't depend on the internal name" or "the pre-check produces a better error message that's used in the UI"). If you can't argue the code is correct, report it.
 4. Respect boundary duplication. Similar code in different packages often serves different boundaries.
 5. Consider the threat model. For security: who provides the input? If trusted, drop it.
 6. No hypotheticals. Only flag things that ARE problems given actual code and usage.
+7. **Accumulate related smells.** If you find 2+ individually-minor issues pointing at the same root cause (e.g., redundant type aliases + dead public methods + stale exports all pointing to "unnecessary API surface"), report them as a single finding with the aggregate evidence. The confidence of the cluster is higher than any individual smell — a pattern of unnecessary indirection is a real design problem even if each instance is small. List each instance as evidence in the VERIFIED field.
 
 ## Hard Exclusions — Automatically drop these
 

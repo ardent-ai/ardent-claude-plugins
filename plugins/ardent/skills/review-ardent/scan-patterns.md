@@ -12,6 +12,7 @@ Grep new/modified `.ts`/`.tsx` files for these anti-patterns and flag each occur
 | `unknown` + cast | Variable typed `unknown` then immediately cast with `as` | `const data: unknown = ...; (data as MyType).foo` |
 | Inline anonymous types | `{ foo: string; bar: number }` in function signatures, variable annotations, or generic type params for shapes that deserve a name | `postRelease<{ skillId: string }>()`, `env: { ADMIN_EMAILS?: string }` when a type already exists |
 | Weakened discriminated unions | A discriminated union replaced with a flat type using optional fields | `{ status: string; installedVersion?: string }` instead of `InstalledSkill \| CatalogSkill` |
+| Per-consumer structural types | Bespoke structural types that carve out the subset of a service each consumer uses, instead of depending on the real type directly | `type FooDatabase = { memories: { listBy(...): ... } }` — depend on `ElectronDatabase` directly; tests can stub unused methods |
 
 These are persistent problems flagged repeatedly in human review. Every occurrence is a finding — no counterargument needed.
 
@@ -44,3 +45,18 @@ Check new/modified files for error handling anti-patterns:
 | Fire-and-forget without catch | Promises with `.catch(() => {})` that discard errors that matter | `.catch(() => {})` on an operation whose failure should be visible |
 
 Silent failures in IPC handlers, async flows, and error boundaries are especially painful in Electron — flag them with high confidence.
+
+## Dead Surface / Indirection Scan
+
+Check new/modified files for unnecessary API surface and indirection:
+
+| Pattern | What to look for | Example |
+|---------|-----------------|---------|
+| Identity type aliases | Type alias that equals another type with no added fields | `type SaveParams = UpdateParams;` — just use `UpdateParams` |
+| Dead public methods | Public methods only called internally or from tests, never by production consumers | `registerSkill()` is public but only `saveSkill()` calls it — make it private |
+| Stale barrel exports | Barrel `index.ts` exports types that no consumer imports, or consumers bypass the barrel to import types not in it | `index.ts` exports `FooParams` but the only consumer imports `BarParams` directly from the source file |
+| Redundant pre-checks | Check-then-act patterns where the act already handles the check (TOCTOU) | `access(path)` before `copyFile(path)` — copyFile already throws ENOENT |
+| Duplicate fields across types | Two types sharing 4+ fields where one could extend or reference the other, or one could be passed directly | `RestoreState` duplicates `backupPath, finalPath, skillId` from `SaveContext` — pass the context instead |
+| Positional params from an existing object | Method takes 3+ positional params that are already fields on a params object the caller has | `writeFiles(path, a, b, c)` where `a, b, c` come from `params` — pass `params` |
+
+These compound — a class with 3+ of these patterns has a real indirection problem. Use verification rule #7 (accumulate related smells) to cluster them into a single finding.

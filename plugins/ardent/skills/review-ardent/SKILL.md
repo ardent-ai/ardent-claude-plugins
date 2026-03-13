@@ -141,7 +141,7 @@ Review all changes yourself in one pass. Read `~/.claude/skills/review/verificat
 - **Gaps**: Anything obviously missing — unhandled cases, absent related changes, untested paths?
 - **Conventions**: CLAUDE.md compliance — naming, patterns, imports, component usage
 - **TypeScript**: Type safety, modern patterns, naming quality, **type quality scan**
-- **Simplicity**: Over-engineering? YAGNI violations? Unnecessary complexity?
+- **Simplicity**: Over-engineering? YAGNI violations? Unnecessary complexity? **Dead surface / indirection scan**
 - **Security**: Actual vulnerabilities given the threat model
 - **Error handling**: Silent failures, swallowed errors, missing context — **silent failure scan**
 - **Tests**: Are the right things tested? Testing philosophy compliance?
@@ -256,7 +256,7 @@ Max 3 findings, max 3 verification reads. No Write/Edit.
 
 | Agent | Focus instructions |
 |-------|---|
-| Convention Reviewer | Check CLAUDE.md compliance: naming, patterns, imports, component usage. Run the **Type Quality Scan**: look for indexed access types (`SomeType['prop']`), utility-type extraction (`ReturnType<typeof fn>`), `typeof` in type positions, `unknown` + cast, inline anonymous types in signatures, weakened discriminated unions. Also run **AI Debt Scan**: restating comments, docstring bloat, generic naming, boilerplate error handling, nosy debug logging, bare TODOs. |
+| Convention Reviewer | Check CLAUDE.md compliance: naming, patterns, imports, component usage. Run the **Type Quality Scan**: look for indexed access types (`SomeType['prop']`), utility-type extraction (`ReturnType<typeof fn>`), `typeof` in type positions, `unknown` + cast, inline anonymous types in signatures, weakened discriminated unions. Also run **AI Debt Scan**: restating comments, docstring bloat, generic naming, boilerplate error handling, nosy debug logging, bare TODOs. Also run **Dead Surface / Indirection Scan**: identity type aliases, stale barrel exports, dead public methods. |
 | TypeScript Reviewer | Type safety, modern patterns, naming quality. Run the **Type Quality Scan** (same patterns as Convention). |
 | Design Reviewer | Right approach? Clean data flow? Proper separation of concerns? Run the **Silent Failure Scan**: empty catch blocks, swallowed errors, broad exception catching, silent fallbacks, missing error context, fire-and-forget without catch. |
 | Security Reviewer | Actual vulnerabilities given the threat model. Run the **Silent Failure Scan**. {Include project threat model if non-default.} |
@@ -264,7 +264,7 @@ Max 3 findings, max 3 verification reads. No Write/Edit.
 | Test Reviewer | Are the right things tested? Testing philosophy compliance? {Note which files are test files vs the code they test.} |
 | Performance Reviewer | N+1 queries, memory leaks, IPC overhead, unnecessary re-renders. {Note which files have DB queries, IPC calls, React components.} |
 | Frontend Reviewer | Stale closures, race conditions, missing cleanup, incorrect deps, event listener leaks. {Note which files are .tsx, hooks, effects.} |
-| Simplicity Reviewer | Over-engineering? YAGNI violations? Unnecessary complexity? |
+| Simplicity Reviewer | Over-engineering? YAGNI violations? Unnecessary complexity? Run the **Dead Surface / Indirection Scan**: identity type aliases, redundant pre-checks (TOCTOU), duplicate fields across types, positional params from existing objects. Accumulate related smells into a single finding per verification rule #7. |
 
 **WAIT** for all background agents to complete before proceeding to Phase 3.
 
